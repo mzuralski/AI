@@ -21,6 +21,7 @@ import util
 from util import Stack
 from util import Queue
 from util import PriorityQueue
+from util import PriorityQueueWithFunction
 from game import Directions
 
 
@@ -68,10 +69,11 @@ class SearchProblem:
 
 
 class Node:
-    def __init__(self, state, parent, direction=None):
+    def __init__(self, state, parent, direction=None, weight=0):
         self._state = state
         self._parent = parent
         self._direction = direction
+        self._weight = weight
 
     @property
     def state(self):
@@ -84,6 +86,10 @@ class Node:
     @property
     def direction(self):
         return self._direction
+
+    @property
+    def weight(self):
+        return self._weight
 
     def directPath(self):
         """
@@ -165,7 +171,7 @@ def graphSearch(problem, collection, pushMethod):
     bigO = 0
 
     fringe = collection
-    pushMethod(fringe, Node(problem.getStartState(), None), None)
+    pushMethod(fringe, Node(problem.getStartState(), None, None, 0))
 
     closed = []
 
@@ -179,14 +185,15 @@ def graphSearch(problem, collection, pushMethod):
         if node.state not in closed:
             closed.append(node.state)
             for child in problem.getSuccessors(node.state):
-                pushMethod(fringe, Node(child[0], node, child[1]), child[2])
+                pushMethod(fringe, Node(child[0], node, child[1],
+                                        node.weight + child[2]))
     return None
 
 
 def expand(node, problem):
     children = []
     for child in problem.getSuccessors(node.state):
-        children.append(Node(child[0], node, child[1]))
+        children.append(Node(child[0], node, child[1], node.weight + child[2]))
     return children
 
 
@@ -206,22 +213,22 @@ def depthFirstSearch(problem):
     """
 
     return graphSearch(problem, Stack(),
-                       lambda collection, node, weight: collection.push(node))
+                       lambda collection, node: collection.push(node))
 
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
     "*** YOUR CODE HERE ***"
     return graphSearch(problem, Queue(),
-                       lambda collection, node, weight: collection.push(node))
+                       lambda collection, node: collection.push(node))
 
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
     return graphSearch(problem, PriorityQueue(),
-                       lambda collection, node, weight: collection.push(node,
-                                                                        weight))
+                       lambda collection, node: collection.push(node,
+                                                                node.weight))
 
 
 def nullHeuristic(state, problem=None):
@@ -235,7 +242,9 @@ def nullHeuristic(state, problem=None):
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    return graphSearch(problem, PriorityQueue(),
+                       lambda collection, node: collection.push(node,
+                                                                heuristic(node.state, problem) + node.weight))
 
 
 # Abbreviations
