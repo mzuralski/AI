@@ -443,14 +443,6 @@ def manhatanDistance(position1, position2):
 # Q7
 #####################################################
 
-class AStarCornersAgent(SearchAgent):
-    "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
-
-    def __init__(self):
-        self.searchFunction = lambda prob: search.aStarSearch(prob,
-                                                              cornersHeuristic)
-        self.searchType = CornersProblem
-
 
 class FoodSearchProblem:
     """
@@ -535,11 +527,13 @@ class HeuristicSearchProblem:
     """
 
     def __init__(self, pacmanPostion, leftFood, verticalWalls, horizontalWalls):
+        self.food = leftFood
         self.start = HeuristicState(pacmanPostion, leftFood)
         self.verticalWalls = verticalWalls
         self.horizontalWalls = horizontalWalls
         self._expanded = 0  # DO NOT CHANGE
         self._result = []
+        self._checked = {}
 
     @property
     def result(self):
@@ -562,7 +556,13 @@ class HeuristicSearchProblem:
         shortDistance = 99999
         shortNode = None
         for food in state.leftFood:
-            distance = manhatanDistanceWithWall(state.position, food, self.horizontalWalls, self.verticalWalls)
+            distance = 0
+            if (state.position, food) in self._checked or (food, state.position) in self._checked:
+                distance = self._checked[(state.position, food)]
+            else:
+                distance = manhatanDistanceWithWall(state.position, food, self.horizontalWalls, self.verticalWalls)
+                self._checked[(state.position, food)] = distance
+                self._checked[(food, state.position)] = distance
             newLeftFood = state.leftFood[:]
             newLeftFood.remove(food)
             successors.append((HeuristicState(food, newLeftFood), food, distance))
@@ -684,7 +684,7 @@ def foodHeuristic(state, problem):
     #
     if 'heuristicProblem' not in problem.heuristicInfo:
         heuristicProblem = HeuristicSearchProblem(position, foodCordinates, verticalWalls, horizontalWalls)
-        heuristicProblem.result = aStarSearch(heuristicProblem, lambda n, k : len(n.leftFood))
+        heuristicProblem.result = aStarSearch(heuristicProblem, lambda node, problem: len(node.leftFood))
         print heuristicProblem._expanded
         problem.heuristicInfo['heuristicProblem'] = heuristicProblem
 
@@ -744,39 +744,46 @@ def manhatanDistanceWithWall(position1, position2, horizontalWalls, verticalWall
     xy1 = position1
     xy2 = position2
 
-    walls = 0
+    pathV = 0
     step = 1 if xy1[0] < xy2[0] else -1
     for i in range(xy1[0], xy2[0], step):
         for wall in verticalWalls[i]:
             if wall.isCroosTheWall(xy1[1]) and wall.isCroosTheWall(xy2[1]):
                 if wall.fromD == 0:
-                    walls += wall.toD - xy1[1]
+                    pathV += wall.toD - xy1[1] + wall.toD - xy2[1] + 2
                 elif wall.toD == 0:
-                    walls += wall.fromD - xy1[1]
+                    pathV += wall.fromD - xy1[1] + wall.fromD - xy2[1] + 2
                 else:
-                    walls += min(abs(wall.toD - xy1[1]), abs(wall.fromD - xy1[1])) + 1
+                    firstPath = abs(wall.toD - xy1[1]) + abs(wall.toD - xy2[1]) + 1
+                    secondPath = abs(wall.fromD - xy1[1]) + abs(wall.fromD - xy2[1]) + 1
+                    pathV += min(firstPath, secondPath) + abs(xy1[0] - xy2[0])
                 break
         else:
             continue
         break
 
+    pathH = 0
     step = 1 if xy1[1] < xy2[1] else -1
-
     for i in range(xy1[1], xy2[1], step):
         for wall in horizontalWalls[i]:
             if wall.isCroosTheWall(xy1[0]) and wall.isCroosTheWall(xy2[0]):
                 if wall.fromD == 0:
-                    walls += wall.toD - xy1[0]
+                    pathH = wall.toD - xy1[0] + wall.toD - xy2[0] + 2
                 elif wall.toD == 0:
-                    walls += wall.fromD - xy1[0]
+                    pathH = wall.fromD - xy1[0] + wall.fromD - xy2[0] + 2
                 else:
-                    walls += min(abs(wall.toD - xy1[0]), abs(wall.fromD - xy1[0])) + 1
+                    firstPath = abs(wall.toD - xy1[0]) + abs(wall.toD - xy2[0]) + 1
+                    secondPath = abs(wall.fromD - xy1[0]) + abs(wall.fromD - xy2[0]) + 1
+                    pathH = min(firstPath, secondPath) + abs(xy1[1] - xy2[1])
                 break
         else:
             continue
         break
 
-    return abs(xy1[0] - xy2[0]) + abs(xy1[1] - xy2[1]) + walls
+    if pathV != 0 or pathH != 0:
+        return max(pathV, pathH)
+    else:
+        return abs(xy1[0] - xy2[0]) + abs(xy1[1] - xy2[1])
 
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"
@@ -785,8 +792,7 @@ class ClosestDotSearchAgent(SearchAgent):
         self.actions = []
         currentState = state
         while (currentState.getFood().count() > 0):
-            nextPathSegment = self.findPathToClosestDot(
-                currentState)  # The missing piece
+            nextPathSegment = self.findPathToClosestDot(currentState)  # The missing piece
             self.actions += nextPathSegment
             for action in nextPathSegment:
                 legal = currentState.getLegalActions()
