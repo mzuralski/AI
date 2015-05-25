@@ -34,12 +34,13 @@ description for details.
 Good luck and happy searching!
 """
 
+import time
+
 from game import Directions
 from game import Agent
 from game import Actions
 from search import aStarSearch
 import util
-import time
 import search
 
 
@@ -168,8 +169,10 @@ class PositionSearchProblem(search.SearchProblem):
         self.costFn = costFn
         self.visualize = visualize
         if warn and (
-                        gameState.getNumFood() != 1 or not gameState.hasFood(*goal)):
-            print 'Warning: this does not look like a regular search maze'
+                        gameState.getNumFood() != 1 or not gameState.hasFood(
+                        *goal)):
+            print
+            'Warning: this does not look like a regular search maze'
 
         # For display purposes
         self._visited, self._visitedlist, self._expanded = {}, [], 0  # DO NOT CHANGE
@@ -187,9 +190,9 @@ class PositionSearchProblem(search.SearchProblem):
 
             if '_display' in dir(__main__):
                 if 'drawExpandedCells' in dir(
-                        __main__._display):  #@UndefinedVariable
+                        __main__._display):  # @UndefinedVariable
                     __main__._display.drawExpandedCells(
-                        self._visitedlist)  #@UndefinedVariable
+                        self._visitedlist)  # @UndefinedVariable
 
         return isGoal
 
@@ -332,7 +335,8 @@ class CornersProblem(search.SearchProblem):
         self.corners = ((1, 1), (1, top), (right, 1), (right, top))
         for corner in self.corners:
             if not startingGameState.hasFood(*corner):
-                print 'Warning: no food in corner ' + str(corner)
+                print
+                'Warning: no food in corner ' + str(corner)
             else:
                 self.reachedCorners[corner] = 0
         self._expanded = 0  # DO NOT CHANGE; Number of search nodes expanded
@@ -420,7 +424,7 @@ def cornersHeuristic(state, problem):
         minDistance = 99999
         minPosition = None
         for curPosition in corners:
-            distance = manhatanDistance(lastPosition, curPosition)
+            distance = manhattanDistance(lastPosition, curPosition)
             if distance <= minDistance:
                 minDistance = distance
                 minPosition = curPosition
@@ -498,8 +502,7 @@ class FoodSearchProblem:
         return cost
 
 
-class HeuristicState:
-
+class FoodSubSearchState:
     def __init__(self, position, leftFood):
         self._position = position
         self._leftFood = leftFood
@@ -516,7 +519,7 @@ class HeuristicState:
         return self.position == other.position and self.leftFood == other.leftFood
 
 
-class HeuristicSearchProblem:
+class FoodSubSearchProblem:
     """
     A search problem associated with finding the a path that collects all of the
     food (dots) in a Pacman game.
@@ -528,7 +531,7 @@ class HeuristicSearchProblem:
 
     def __init__(self, pacmanPostion, leftFood, verticalWalls, horizontalWalls):
         self.food = leftFood
-        self.start = HeuristicState(pacmanPostion, leftFood)
+        self.start = FoodSubSearchState(pacmanPostion, leftFood)
         self.verticalWalls = verticalWalls
         self.horizontalWalls = horizontalWalls
         self._expanded = 0  # DO NOT CHANGE
@@ -557,15 +560,19 @@ class HeuristicSearchProblem:
         shortNode = None
         for food in state.leftFood:
             distance = 0
-            if (state.position, food) in self._checked or (food, state.position) in self._checked:
+            if (state.position, food) in self._checked or (
+                    food, state.position) in self._checked:
                 distance = self._checked[(state.position, food)]
             else:
-                distance = manhatanDistanceWithWall(state.position, food, self.horizontalWalls, self.verticalWalls)
+                distance = manhattanDistanceWithWall(state.position, food,
+                                                     self.horizontalWalls,
+                                                     self.verticalWalls)
                 self._checked[(state.position, food)] = distance
                 self._checked[(food, state.position)] = distance
             newLeftFood = state.leftFood[:]
             newLeftFood.remove(food)
-            successors.append((HeuristicState(food, newLeftFood), food, distance))
+            successors.append(
+                (FoodSubSearchState(food, newLeftFood), food, distance))
         return successors
 
     def getCostOfActions(self, actions):
@@ -578,9 +585,12 @@ class HeuristicSearchProblem:
         cost = 0
         for action in actions:
             # figure out the next state and see whether it's legal
-            cost += manhatanDistanceWithWall(start, action, self.horizontalWalls, self.verticalWalls)
+            cost += manhattanDistanceWithWall(start, action,
+                                              self.horizontalWalls,
+                                              self.verticalWalls)
             start = action
         return cost
+
 
 class AStarFoodSearchAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
@@ -660,7 +670,8 @@ def foodHeuristic(state, problem):
                         start = j
                     finish += 1
                 elif finish > -1:
-                    horizontalWalls[i].append(HorizontalWall(start, start + finish))
+                    horizontalWalls[i].append(
+                        HorizontalWall(start, start + finish))
                     start = -1
                     finish = -1
             horizontalWalls[i].append(HorizontalWall(start, start + finish))
@@ -674,31 +685,35 @@ def foodHeuristic(state, problem):
     for food in foodCordinates:
         if foodGrid[food[0]][food[1]] is False:
             eatedFood.append(food)
-
     for food in eatedFood:
         foodCordinates.remove(food)
 
     if foodCordinates is None or len(foodCordinates) == 0:
         return 0
 
-    #
     if 'heuristicProblem' not in problem.heuristicInfo:
-        heuristicProblem = HeuristicSearchProblem(position, foodCordinates, verticalWalls, horizontalWalls)
+        foodToRemove = FoodSurrounded.foodToRemove(problem.walls, foodCordinates[:])
+        foodToFind = foodCordinates[:]
+        for f in foodToRemove:
+            if f in foodToFind:
+                foodToFind.remove(f)
+        heuristicProblem = FoodSubSearchProblem(position, foodToFind, verticalWalls, horizontalWalls)
         heuristicProblem.result = aStarSearch(heuristicProblem, lambda node, problem: len(node.leftFood))
-        print heuristicProblem._expanded
+        print 'Expanded', heuristicProblem._expanded
         problem.heuristicInfo['heuristicProblem'] = heuristicProblem
+
 
     heuristicProblem = problem.heuristicInfo['heuristicProblem']
     heuristicProblemResult = heuristicProblem.result[:]
     for eated in eatedFood:
-        heuristicProblemResult.remove(eated)
+        if eated in heuristicProblemResult:
+            heuristicProblemResult.remove(eated)
 
     result = heuristicProblem.getCostOfActions(position, heuristicProblemResult)
     return result
 
 
 class Wall:
-
     def __init__(self, fromD, toD):
         self._fromD = fromD
         self._toD = toD
@@ -717,8 +732,8 @@ class Wall:
     def size(self):
         return abs(self.fromD - self.toD)
 
-class HorizontalWall(Wall):
 
+class HorizontalWall(Wall):
     def __init__(self, fromD, toD):
         Wall.__init__(self, fromD, toD)
 
@@ -727,54 +742,156 @@ class HorizontalWall(Wall):
 
 
 class VerticalWall(Wall):
-
     def __init__(self, fromD, toD):
         Wall.__init__(self, fromD, toD)
 
     def isCroosTheLine(self, point):
         return Wall.isCroosTheWall(self, point[1])
 
-def manhatanDistance(position1, position2):
+
+class FoodSurrounded:
+    @staticmethod
+    def positions(position):
+        x = 0
+        y = 1
+        positions = {
+            0: (position[x], position[y] + 1),
+            1: (position[x] + 1, position[y] + 1),
+            2: (position[x] + 1, position[y]),
+            3: (position[x] + 1, position[y] - 1),
+            4: (position[x], position[y] - 1),
+            5: (position[x] - 1, position[y] - 1),
+            6: (position[x] - 1, position[y]),
+            7: (position[x] - 1, position[y] + 1)
+        }
+        return positions
+
+    @staticmethod
+    def isSurrounded(position, walls):
+        """
+
+        :rtype : tuple
+        """
+        surroundedTab = ''
+        positions = FoodSurrounded.positions(position)
+        positionsKeys = list(positions.keys())
+        positionsKeys.sort()
+        for k in positionsKeys:
+            surroundedTab += FoodSurrounded.isTheWallInThisPosition(walls, positions[k])
+
+        tmpStr = ("".join(surroundedTab)) * 2
+        idx = tmpStr.find('XXXXX')
+        if idx > -1:
+            if tmpStr[0: 0 + 5] == 'XXXXX':
+                return position, positions[6]
+            elif tmpStr[2: 2 + 5] == 'XXXXX':
+                return position, positions[0]
+            elif tmpStr[4: 4+5] == 'XXXXX':
+                return position, positions[2]
+            elif tmpStr[6: 6 + 5] == 'XXXXX':
+                return position, positions[4]
+        return None, None
+
+
+    @staticmethod
+    def foodToRemove(walls, foodPositions):
+        surroundedFoods = []
+        for food in foodPositions:
+            surroundedFood = FoodSurrounded.isSurrounded(food, walls)
+            if surroundedFood != (None, None):
+                surroundedFoods.append(surroundedFood)
+                foodPositions.remove(food)
+
+        foodToRemove = []
+        for k in surroundedFoods:
+            food = k[0]
+            nextFood = k[1]
+            foodToRemove.append(nextFood)
+            while nextFood in foodPositions:
+                from copy import copy, deepcopy
+                tmpWalls = deepcopy(walls)
+                tmpWalls[food[0]][food[1]] = True
+                food, nextFood = FoodSurrounded.isSurrounded(nextFood, tmpWalls)
+                if food is not None:
+                    foodToRemove.append(food)
+
+        return foodToRemove
+
+    @staticmethod
+    def isTheWallInThisPosition(walls, position):
+        """
+
+        :rtype : str
+        """
+        x = 0
+        y = 1
+        if walls[position[x]][position[y]]:
+            return 'X'
+        else:
+            return '0'
+
+    @staticmethod
+    def isTheFoodInThisPosition(foods, position):
+        x = 0
+        y = 1
+        return foods[position[x]][position[y]]
+
+
+def manhattanDistance(position1, position2):
     xy1 = position1
     xy2 = position2
     return abs(xy1[0] - xy2[0]) + abs(xy1[1] - xy2[1])
 
-def manhatanDistanceWithWall(position1, position2, horizontalWalls, verticalWalls):
-    "The Manhattan distance heuristic for a PositionSearchProblem"
-    xy1 = position1
-    xy2 = position2
+
+def manhattanDistanceWithWall(position1, position2, horizontalWalls,
+                              verticalWalls):
+    # The Manhattan distance heuristic for a PositionSearchProblem
+    x = 0
+    y = 1
 
     pathV = 0
-    step = 1 if xy1[0] < xy2[0] else -1
-    for i in range(xy1[0], xy2[0], step):
-        for wall in verticalWalls[i]:
-            if wall.isCroosTheWall(xy1[1]) and wall.isCroosTheWall(xy2[1]):
-                if wall.fromD == 0:
-                    pathV += wall.toD - xy1[1] + wall.toD - xy2[1] + 2
-                elif wall.toD == 0:
-                    pathV += wall.fromD - xy1[1] + wall.fromD - xy2[1] + 2
+    step = 1 if position1[x] < position2[x] else -1
+    for i in range(position1[x], position2[x], step):
+        for xWall in verticalWalls[i]:
+            if xWall.isCroosTheWall(position1[y]) and xWall.isCroosTheWall(
+                    position2[y]):
+                if xWall.fromD == 0:
+                    pathV += xWall.toD - position1[y] + xWall.toD - position2[
+                        y] + 2
+                elif xWall.toD == 0:
+                    pathV += xWall.fromD - position1[y] + xWall.fromD - \
+                             position2[y] + 2
                 else:
-                    firstPath = abs(wall.toD - xy1[1]) + abs(wall.toD - xy2[1]) + 1
-                    secondPath = abs(wall.fromD - xy1[1]) + abs(wall.fromD - xy2[1]) + 1
-                    pathV += min(firstPath, secondPath) + abs(xy1[0] - xy2[0])
+                    firstPath = abs(xWall.toD - position1[y]) + abs(
+                        xWall.toD - position2[y]) + 1
+                    secondPath = abs(xWall.fromD - position1[y]) + abs(
+                        xWall.fromD - position2[y]) + 1
+                    pathV += min(firstPath, secondPath) + abs(
+                        position1[x] - position2[x])
                 break
         else:
             continue
         break
 
     pathH = 0
-    step = 1 if xy1[1] < xy2[1] else -1
-    for i in range(xy1[1], xy2[1], step):
-        for wall in horizontalWalls[i]:
-            if wall.isCroosTheWall(xy1[0]) and wall.isCroosTheWall(xy2[0]):
-                if wall.fromD == 0:
-                    pathH = wall.toD - xy1[0] + wall.toD - xy2[0] + 2
-                elif wall.toD == 0:
-                    pathH = wall.fromD - xy1[0] + wall.fromD - xy2[0] + 2
+    step = 1 if position1[y] < position2[y] else -1
+    for i in range(position1[y], position2[y], step):
+        for xWall in horizontalWalls[i]:
+            if xWall.isCroosTheWall(position1[x]) and xWall.isCroosTheWall(
+                    position2[x]):
+                if xWall.fromD == 0:
+                    pathH = xWall.toD - position1[x] + xWall.toD - position2[
+                        x] + 2
+                elif xWall.toD == 0:
+                    pathH = xWall.fromD - position1[x] + xWall.fromD - \
+                            position2[x] + 2
                 else:
-                    firstPath = abs(wall.toD - xy1[0]) + abs(wall.toD - xy2[0]) + 1
-                    secondPath = abs(wall.fromD - xy1[0]) + abs(wall.fromD - xy2[0]) + 1
-                    pathH = min(firstPath, secondPath) + abs(xy1[1] - xy2[1])
+                    firstPath = abs(xWall.toD - position1[x]) + abs(
+                        xWall.toD - position2[x]) + 1
+                    secondPath = abs(xWall.fromD - position1[x]) + abs(
+                        xWall.fromD - position2[x]) + 1
+                    pathH = min(firstPath, secondPath) + abs(
+                        position1[y] - position2[y])
                 break
         else:
             continue
@@ -783,7 +900,9 @@ def manhatanDistanceWithWall(position1, position2, horizontalWalls, verticalWall
     if pathV != 0 or pathH != 0:
         return max(pathV, pathH)
     else:
-        return abs(xy1[0] - xy2[0]) + abs(xy1[1] - xy2[1])
+        return abs(position1[x] - position2[x]) + abs(
+            position1[y] - position2[y])
+
 
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"
@@ -792,7 +911,8 @@ class ClosestDotSearchAgent(SearchAgent):
         self.actions = []
         currentState = state
         while (currentState.getFood().count() > 0):
-            nextPathSegment = self.findPathToClosestDot(currentState)  # The missing piece
+            nextPathSegment = self.findPathToClosestDot(
+                currentState)  # The missing piece
             self.actions += nextPathSegment
             for action in nextPathSegment:
                 legal = currentState.getLegalActions()
@@ -801,7 +921,8 @@ class ClosestDotSearchAgent(SearchAgent):
                     raise Exception, 'findPathToClosestDot returned an illegal move: %s!\n%s' % t
                 currentState = currentState.generateSuccessor(0, action)
         self.actionIndex = 0
-        print 'Path found with cost %d.' % len(self.actions)
+        print
+        'Path found with cost %d.' % len(self.actions)
 
     def findPathToClosestDot(self, gameState):
         """
