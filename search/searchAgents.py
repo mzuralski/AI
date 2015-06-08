@@ -436,7 +436,7 @@ def cornersHeuristic(state, problem):
     return result
 
 
-def manhatanDistance(position1, position2):
+def manhattanDistance(position1, position2):
     "The Manhattan distance heuristic for a PositionSearchProblem"
     xy1 = position1
     xy2 = position2
@@ -837,12 +837,6 @@ class FoodSurrounded:
         return foods[position[x]][position[y]]
 
 
-def manhattanDistance(position1, position2):
-    xy1 = position1
-    xy2 = position2
-    return abs(xy1[0] - xy2[0]) + abs(xy1[1] - xy2[1])
-
-
 def manhattanDistanceWithWall(position1, position2, horizontalWalls,
                               verticalWalls):
     # The Manhattan distance heuristic for a PositionSearchProblem
@@ -911,8 +905,7 @@ class ClosestDotSearchAgent(SearchAgent):
         self.actions = []
         currentState = state
         while (currentState.getFood().count() > 0):
-            nextPathSegment = self.findPathToClosestDot(
-                currentState)  # The missing piece
+            nextPathSegment = self.findPathToClosestDot(currentState)  # The missing piece
             self.actions += nextPathSegment
             for action in nextPathSegment:
                 legal = currentState.getLegalActions()
@@ -921,8 +914,7 @@ class ClosestDotSearchAgent(SearchAgent):
                     raise Exception, 'findPathToClosestDot returned an illegal move: %s!\n%s' % t
                 currentState = currentState.generateSuccessor(0, action)
         self.actionIndex = 0
-        print
-        'Path found with cost %d.' % len(self.actions)
+        print 'Path found with cost %d.' % len(self.actions)
 
     def findPathToClosestDot(self, gameState):
         """
@@ -935,9 +927,9 @@ class ClosestDotSearchAgent(SearchAgent):
         walls = gameState.getWalls()
         problem = AnyFoodSearchProblem(gameState)
 
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
-
+        anyFoodSearchProblem = AnyFoodSearchProblem(gameState)
+        result = aStarSearch(anyFoodSearchProblem)
+        return result
 
 class AnyFoodSearchProblem(PositionSearchProblem):
     """
@@ -971,9 +963,7 @@ class AnyFoodSearchProblem(PositionSearchProblem):
         complete the problem definition.
         """
         x, y = state
-
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return self.food[x][y]
 
 
 def mazeDistance(point1, point2, gameState):

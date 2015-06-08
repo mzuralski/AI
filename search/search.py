@@ -241,7 +241,6 @@ def nullHeuristic(state, problem=None):
 
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
-    "*** YOUR CODE HERE ***"
     return graphSearch(problem, PriorityQueue(),
                        lambda collection, node: collection.push(node,
                                                                 heuristic(node.state, problem) + node.weight))
